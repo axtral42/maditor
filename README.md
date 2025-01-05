@@ -1,8 +1,11 @@
-Maditor - The text editor for Madlads
+# Maditor - The text editor for Madlads
+
+**Currently in development phase**
 
 Getting started:
 ``` console
-    make
-    ./te
+    make && ./maditor
 ```
+## Features:
+Can write text upto 1kb and delete using backspace
 
