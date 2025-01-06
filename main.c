@@ -123,7 +123,7 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
 
     const size_t index = c - ASCII_DISPLAY_LOW;
 
-    scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[index],&dst));
+    
     Uint32 c2=pow(c_val,5);
     if (mode==0){
         r=rand(); //rand works but rand_r with seed doesn't work, why?
@@ -136,6 +136,7 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
     //removing c_val makes all the text black, understand why
     scc(SDL_SetTextureColorMod(font->spritesheet, (color & (c_val^ c2 ^ r) >> (8 * 0)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 1)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 2)) & 0xff));
     scc(SDL_SetTextureAlphaMod(font->spritesheet, (color >> (8 * 3)) & 0xff)); //sets the color and alpha value for the given input string of text
+    scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[index],&dst)); //moved to the last so updated texture mod is reflected
 
 }
 
@@ -175,7 +176,10 @@ void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float sca
     char len[10];
     sprintf(len, "%lu", buffer_size);
     strcat(schars,len);
+    //printf("%s\n",schars);
     //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
+    //reason: in the render char function render copy copied the texture to buffer before texture mod was set, hence color mismatch happened, as c was copied before setting to white
+    //sol: moved render copy to the end of function and after texture mod set
     render_text(renderer, font, schars, vec2f(0.0, WINDOW_HEIGHT-(FONT_CHAR_HEIGHT*scale)), color, scale, 0, 1);
 }
 
@@ -187,7 +191,7 @@ int main (void){
     
     int mode=1;
 
-    SDL_Window* window= scp(SDL_CreateWindow("Text Editor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
+    SDL_Window* window= scp(SDL_CreateWindow("Maditor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
     Font font = font_load_from_file(renderer, "./charmap-oldschool_white.png");
@@ -215,6 +219,7 @@ int main (void){
                          } break;
 
                          case SDLK_F5: {
+                            r=rand_r(&seed); //this will provide different value for multi color typing mode (2) 
                             mode = (mode +1) % 3;
                          }
                     }
@@ -240,7 +245,6 @@ int main (void){
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE);
         SDL_RenderPresent(renderer); //updates the screen
-        
     }
 
     SDL_Quit();
