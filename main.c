@@ -25,6 +25,9 @@
 #define BUFFER_CAPACITY 1024
 #define FONT_COLOR 0xFFFFFFFF
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 #define UNHEXRGBA(color) \
 (color >> (8 * 0)) & 0xff, \
 (color >> (8 * 1)) & 0xff, \
@@ -121,19 +124,18 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
     const size_t index = c - ASCII_DISPLAY_LOW;
 
     scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[index],&dst));
-    Uint32 c2=pow(c,5);
+    Uint32 c2=pow(c_val,5);
     if (mode==0){
-        r=rand();
+        r=rand(); //rand works but rand_r with seed doesn't work, why?
     }
     else if (mode==1){
-        c_val=c_val| 0xffffffff;
+        c_val |= 0xffffff; 
         c2=0;
         r=0;
     }
-    scc(SDL_SetTextureColorMod(font->spritesheet, (color & (c_val^c2 ^ r) >> (8 * 0)) & 0xff,(color & (c_val^c2 ^ r) >> (8 * 1)) & 0xff,(color & (c_val^c2 ^ r) >> (8 * 2)) & 0xff));
+    //removing c_val makes all the text black, understand why
+    scc(SDL_SetTextureColorMod(font->spritesheet, (color & (c_val^ c2 ^ r) >> (8 * 0)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 1)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 2)) & 0xff));
     scc(SDL_SetTextureAlphaMod(font->spritesheet, (color >> (8 * 3)) & 0xff)); //sets the color and alpha value for the given input string of text
-    // to set for individual character simply move to render_char
-
 
 }
 
@@ -168,6 +170,15 @@ void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
     scc(SDL_RenderFillRect(renderer, &rect));
 }
 
+void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale){
+    char schars[100]= "characters:";
+    char len[10];
+    sprintf(len, "%lu", buffer_size);
+    strcat(schars,len);
+    //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
+    render_text(renderer, font, schars, vec2f(0.0, WINDOW_HEIGHT-(FONT_CHAR_HEIGHT*scale)), color, scale, 0, 1);
+}
+
 int main (void){
     // Taking current time as seed
     unsigned int seed = time(0);
@@ -176,7 +187,7 @@ int main (void){
     
     int mode=1;
 
-    SDL_Window* window= scp(SDL_CreateWindow("Text Editor", 0,0, 800, 600, SDL_WINDOW_RESIZABLE));
+    SDL_Window* window= scp(SDL_CreateWindow("Text Editor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
     Font font = font_load_from_file(renderer, "./charmap-oldschool_white.png");
@@ -199,11 +210,11 @@ int main (void){
                             //printf("In backspace \n");
                             if (buffer_size > 0){
                                 buffer_size -= 1;
+                                buffer_cursor=buffer_size;
                             }
                          } break;
 
                          case SDLK_F5: {
-                            r=rand_r(&seed);
                             mode = (mode +1) % 3;
                          }
                     }
@@ -218,6 +229,7 @@ int main (void){
                     }
                     memcpy(buffer + buffer_size, event.text.text, text_size);
                     buffer_size += text_size;
+                    buffer_cursor=buffer_size;
                 } break;
             }
         }
@@ -225,9 +237,10 @@ int main (void){
         scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
 
         render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
-        buffer_cursor=buffer_size; //for now cursor is always at the end of the printed text, this will change as we introduce arrow keys
         render_cursor(renderer, &font, FONT_COLOR);
+        render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE);
         SDL_RenderPresent(renderer); //updates the screen
+        
     }
 
     SDL_Quit();
