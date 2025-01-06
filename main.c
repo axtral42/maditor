@@ -2,6 +2,8 @@
 #include<stdlib.h>
 #include<SDL.h>
 #include<stdbool.h>
+#include <math.h>
+#include <time.h>
 
 #include "./la.h"
 
@@ -102,7 +104,10 @@ Font font_load_from_file(SDL_Renderer* renderer, const char *file_path){
     return font;
 }
 
-void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, float scale){
+
+
+void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
+    int c_val=c;
 
     const SDL_Rect dst={
         .x=(int) floorf(pos.x),
@@ -113,28 +118,38 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, float sc
     assert(c>= ASCII_DISPLAY_LOW);
     assert(c<=ASCII_DISPLAY_HIGH);
 
-    const size_t index = c - ASCII_DISPLAY_LOW;  
+    const size_t index = c - ASCII_DISPLAY_LOW;
 
     scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[index],&dst));
-
-}
-
-void render_text_sized(SDL_Renderer* renderer, Font* font,const char* text, size_t text_size,  Vec2f pos, Uint32 color, float scale){
-    
-    scc(SDL_SetTextureColorMod(font->spritesheet, UNHEXRGB(color)));
+    Uint32 c2=pow(c,5);
+    if (mode==0){
+        r=rand();
+    }
+    else if (mode==1){
+        c_val=c_val| 0xffffffff;
+        c2=0;
+        r=0;
+    }
+    scc(SDL_SetTextureColorMod(font->spritesheet, (color & (c_val^c2 ^ r) >> (8 * 0)) & 0xff,(color & (c_val^c2 ^ r) >> (8 * 1)) & 0xff,(color & (c_val^c2 ^ r) >> (8 * 2)) & 0xff));
     scc(SDL_SetTextureAlphaMod(font->spritesheet, (color >> (8 * 3)) & 0xff)); //sets the color and alpha value for the given input string of text
     // to set for individual character simply move to render_char
 
+
+}
+
+void render_text_sized(SDL_Renderer* renderer, Font* font,const char* text, size_t text_size,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
+    
+    
     Vec2f pen= pos;
 
     for(size_t i=0; i<text_size; ++i){
-        render_char(renderer,font, text[i],  pen, scale);
+        render_char(renderer,font, text[i],  pen, color, scale, r, mode);
         pen.x += FONT_CHAR_WIDTH * scale;
     }
 }
 
-void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos, Uint32 color, float scale){
-    render_text_sized(renderer,font,text, strlen(text), pos,color, scale);
+void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
+    render_text_sized(renderer,font,text, strlen(text), pos,color, scale, r, mode);
 }
 
 char buffer[BUFFER_CAPACITY];
@@ -155,8 +170,13 @@ void render_cursor(SDL_Renderer* renderer, Uint32 color){
 }
 
 int main (void){
+    // Taking current time as seed
+    unsigned int seed = time(0);
+    Uint32 r=rand_r(&seed); //random seed
     scc(SDL_Init(SDL_INIT_VIDEO));
     
+    int mode=1;
+
     SDL_Window* window= scp(SDL_CreateWindow("Text Editor", 0,0, 800, 600, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
@@ -174,19 +194,23 @@ int main (void){
                 } break;
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
-                    printf("In event \n");
+                    //printf("In event \n");
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
-                            printf("In backspace \n");
+                            //printf("In backspace \n");
                             if (buffer_size > 0){
                                 buffer_size -= 1;
                             }
                          } break;
+
+                         case SDLK_F5: {
+                            mode = (mode +1) % 3;
+                         }
                     }
                 } break;
 
                 case SDL_TEXTINPUT: {
-                    printf(" Typing \n");
+                    //printf(" Typing \n");
                     size_t text_size = strlen(event.text.text);
                     const size_t free_space = BUFFER_CAPACITY - buffer_size;
                     if (text_size>free_space){
@@ -200,7 +224,7 @@ int main (void){
         scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
         scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
 
-        render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE);
+        render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
         buffer_cursor=buffer_size; //for now cursor is always at the end of the printed text, this will change as we introduce arrow keys
         render_cursor(renderer, FONT_COLOR);
         SDL_RenderPresent(renderer); //updates the screen
