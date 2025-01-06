@@ -4,6 +4,7 @@
 #include<stdbool.h>
 #include <math.h>
 #include <time.h>
+#include<unistd.h>
 
 #include "./la.h"
 
@@ -108,7 +109,6 @@ Font font_load_from_file(SDL_Renderer* renderer, const char *file_path){
 
 void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
     int c_val=c;
-
     const SDL_Rect dst={
         .x=(int) floorf(pos.x),
         .y=(int) floorf(pos.y),
@@ -156,17 +156,16 @@ char buffer[BUFFER_CAPACITY];
 size_t buffer_size=0;
 size_t buffer_cursor=0;
 
-void render_cursor(SDL_Renderer* renderer, Uint32 color){
+void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
     const SDL_Rect rect={
         .x=(int) floorf(buffer_cursor*FONT_CHAR_WIDTH*FONT_SCALE),
         .y=0 ,
         .w=FONT_CHAR_WIDTH * FONT_SCALE,
         .h=FONT_CHAR_HEIGHT * FONT_SCALE
     };
-
+    //scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[92],&rect));  //use a | as a cursor, will also change color with the text, no blinking
     scc(SDL_SetRenderDrawColor(renderer, UNHEXRGBA(color))); //try to understand how this function works
     scc(SDL_RenderFillRect(renderer, &rect));
-
 }
 
 int main (void){
@@ -204,6 +203,7 @@ int main (void){
                          } break;
 
                          case SDLK_F5: {
+                            r=rand_r(&seed);
                             mode = (mode +1) % 3;
                          }
                     }
@@ -226,7 +226,7 @@ int main (void){
 
         render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
         buffer_cursor=buffer_size; //for now cursor is always at the end of the printed text, this will change as we introduce arrow keys
-        render_cursor(renderer, FONT_COLOR);
+        render_cursor(renderer, &font, FONT_COLOR);
         SDL_RenderPresent(renderer); //updates the screen
     }
 
