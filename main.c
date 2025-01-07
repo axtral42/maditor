@@ -188,6 +188,7 @@ int main (void){
     Uint32 r=rand_r(&seed); //random seed
     scc(SDL_Init(SDL_INIT_VIDEO));
     int w=WINDOW_WIDTH,h=WINDOW_HEIGHT;
+    int wi=w, hi=h;
     int mode=1;
     SDL_Window* window= scp(SDL_CreateWindow("Maditor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
@@ -197,6 +198,7 @@ int main (void){
     
 
     bool quit=false;
+    bool update=true;
     while (!quit){
         SDL_Event event={0}; //initialising the event struct
         while (SDL_PollEvent(&event)){
@@ -207,6 +209,7 @@ int main (void){
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
                     //printf("In event \n");
+                    update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
                             //printf("In backspace \n");
@@ -236,13 +239,22 @@ int main (void){
                 } break;
             }
         }
-        scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
-        scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
+        
+        if (update || wi!=w || hi!=h || mode==0){
+            wi=w;
+            hi=h;
+            scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
+        
+            scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
 
         render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
+        printf("Updating\n");
+        update=false;
         SDL_RenderPresent(renderer); //updates the screen
+        }
+        
         SDL_GetWindowSize(window, &w,&h);
     }
 
