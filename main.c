@@ -171,16 +171,15 @@ void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
     scc(SDL_RenderFillRect(renderer, &rect));
 }
 
-void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale){
+void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale, int h){
     char schars[100]= "characters:";
     char len[10];
     sprintf(len, "%lu", buffer_size);
     strcat(schars,len);
-    //printf("%s\n",schars);
     //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
     //reason: in the render char function render copy copied the texture to buffer before texture mod was set, hence color mismatch happened, as c was copied before setting to white
     //sol: moved render copy to the end of function and after texture mod set
-    render_text(renderer, font, schars, vec2f(0.0, WINDOW_HEIGHT-(FONT_CHAR_HEIGHT*scale)), color, scale, 0, 1);
+    render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale, 0, 1);
 }
 
 int main (void){
@@ -188,9 +187,8 @@ int main (void){
     unsigned int seed = time(0);
     Uint32 r=rand_r(&seed); //random seed
     scc(SDL_Init(SDL_INIT_VIDEO));
-    
+    int w=WINDOW_WIDTH,h=WINDOW_HEIGHT;
     int mode=1;
-
     SDL_Window* window= scp(SDL_CreateWindow("Maditor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
@@ -243,8 +241,9 @@ int main (void){
 
         render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
         render_cursor(renderer, &font, FONT_COLOR);
-        render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE);
+        render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
         SDL_RenderPresent(renderer); //updates the screen
+        SDL_GetWindowSize(window, &w,&h);
     }
 
     SDL_Quit();
