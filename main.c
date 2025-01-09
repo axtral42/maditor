@@ -90,6 +90,7 @@ typedef struct{
 Font font_load_from_file(SDL_Renderer* renderer, const char *file_path){
     Font font={0};
      SDL_Surface* font_surface= surface_from_file(file_path);
+     scc(SDL_SetColorKey(font_surface, SDL_TRUE, 0xFF000000)); //adjusts transparency, study how
      font.spritesheet =scp(SDL_CreateTextureFromSurface(renderer,font_surface));
      SDL_FreeSurface(font_surface);
 
@@ -160,15 +161,19 @@ size_t buffer_size=0;
 size_t buffer_cursor=0;
 
 void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
+    Vec2f pos= vec2f(buffer_cursor*FONT_CHAR_WIDTH*FONT_SCALE, 0.0f);
     const SDL_Rect rect={
-        .x=(int) floorf(buffer_cursor*FONT_CHAR_WIDTH*FONT_SCALE),
-        .y=0 ,
+        .x=(int) floorf(pos.x),
+        .y=pos.y ,
         .w=FONT_CHAR_WIDTH * FONT_SCALE,
         .h=FONT_CHAR_HEIGHT * FONT_SCALE
     };
     //scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[92],&rect));  //use a | as a cursor, will also change color with the text, no blinking
     scc(SDL_SetRenderDrawColor(renderer, UNHEXRGBA(color))); //try to understand how this function works
     scc(SDL_RenderFillRect(renderer, &rect));
+    if (buffer_cursor<buffer_size){
+    render_char(renderer, font,buffer[buffer_cursor],  pos, color & 0xffffff00, FONT_SCALE , 0 , 0); //and operation to make alpha 00 and hence transparent or something, but if alpha not 00 it won't work, understand why
+    }
 }
 
 void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale, int h){
@@ -186,10 +191,11 @@ int main (void){
     // Taking current time as seed
     unsigned int seed = time(0);
     Uint32 r=rand_r(&seed); //random seed
+    int mode=1;
     scc(SDL_Init(SDL_INIT_VIDEO));
     int w=WINDOW_WIDTH,h=WINDOW_HEIGHT;
     int wi=w, hi=h;
-    int mode=1;
+    
     SDL_Window* window= scp(SDL_CreateWindow("Maditor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
@@ -208,7 +214,7 @@ int main (void){
                 } break;
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
-                    printf("In event \n");
+                    //printf("In event \n");
                     update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
@@ -216,6 +222,16 @@ int main (void){
                             if (buffer_size > 0){
                                 buffer_size -= 1;
                                 buffer_cursor=buffer_size;
+                            }
+                         } break;
+                          case SDLK_LEFT: {
+                            if (buffer_cursor > 0){
+                                buffer_cursor -= 1;
+                            }
+                         } break;
+                          case SDLK_RIGHT: {
+                            if (buffer_cursor < buffer_size){
+                                buffer_cursor += 1;
                             }
                          } break;
 
@@ -227,7 +243,7 @@ int main (void){
                 } break;
 
                 case SDL_TEXTINPUT: {
-                    printf(" Typing \n");
+                    //printf(" Typing \n");
                     size_t text_size = strlen(event.text.text);
                     const size_t free_space = BUFFER_CAPACITY - buffer_size;
                     if (text_size>free_space){
@@ -250,7 +266,7 @@ int main (void){
         render_text_sized(renderer, &font, buffer,buffer_size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
-        printf("Updating\n");
+        //printf("Updating\n");
         update=false;
         SDL_RenderPresent(renderer); //updates the screen
         }
