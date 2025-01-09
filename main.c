@@ -119,10 +119,9 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
         .w=(int) floorf(FONT_CHAR_WIDTH * scale),
         .h=(int) floorf(FONT_CHAR_HEIGHT * scale)
     };
-    assert(c>= ASCII_DISPLAY_LOW);
-    assert(c<=ASCII_DISPLAY_HIGH);
-
-    const size_t index = c - ASCII_DISPLAY_LOW;
+    size_t index = '?' - ASCII_DISPLAY_LOW;
+    if (c>= ASCII_DISPLAY_LOW && c<=ASCII_DISPLAY_HIGH)
+    index = c - ASCII_DISPLAY_LOW;
 
     
     Uint32 c2=pow(c_val,5);
@@ -187,6 +186,33 @@ void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float sca
     render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale*0.5, 0, 1);
 }
 
+void buffer_insert_before_cursor(const char* text){
+    size_t text_size = strlen(text);
+    const size_t free_space = BUFFER_CAPACITY - buffer_size;
+    if (text_size>free_space){
+        text_size=buffer_size;
+    }
+    memmove(buffer+buffer_cursor+text_size,buffer+buffer_cursor,buffer_size-buffer_cursor);
+    memcpy(buffer + buffer_cursor, text, text_size);
+    buffer_size += text_size;
+    buffer_cursor+= text_size;
+}
+
+void buffer_backspace(void){
+        if (buffer_size > 0 && buffer_cursor>0){
+            memmove(buffer+buffer_cursor -1, buffer+buffer_cursor, buffer_size - buffer_cursor);
+            buffer_size -= 1;
+            buffer_cursor-=1;
+        }
+}
+
+void buffer_delete(void){
+        if (buffer_size > 0 && buffer_cursor<buffer_size){
+            memmove(buffer+buffer_cursor, buffer+buffer_cursor +1 , buffer_size - buffer_cursor);
+            buffer_size -= 1;
+        }
+}
+
 int main (void){
     // Taking current time as seed
     unsigned int seed = time(0);
@@ -219,10 +245,12 @@ int main (void){
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
                             //printf("In backspace \n");
-                            if (buffer_size > 0){
-                                buffer_size -= 1;
-                                buffer_cursor=buffer_size;
-                            }
+                           buffer_backspace();
+                         } break;
+
+                          case SDLK_DELETE: {
+                            //printf("In backspace \n");
+                           buffer_delete();
                          } break;
                           case SDLK_LEFT: {
                             if (buffer_cursor > 0){
@@ -244,14 +272,7 @@ int main (void){
 
                 case SDL_TEXTINPUT: {
                     //printf(" Typing \n");
-                    size_t text_size = strlen(event.text.text);
-                    const size_t free_space = BUFFER_CAPACITY - buffer_size;
-                    if (text_size>free_space){
-                        text_size=buffer_size;
-                    }
-                    memcpy(buffer + buffer_size, event.text.text, text_size);
-                    buffer_size += text_size;
-                    buffer_cursor=buffer_size;
+                   buffer_insert_before_cursor(event.text.text);
                 } break;
             }
         }
