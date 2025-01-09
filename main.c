@@ -179,7 +179,7 @@ void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float sca
     //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
     //reason: in the render char function render copy copied the texture to buffer before texture mod was set, hence color mismatch happened, as c was copied before setting to white
     //sol: moved render copy to the end of function and after texture mod set
-    render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale, 0, 1);
+    render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale*0.5, 0, 1);
 }
 
 int main (void){
@@ -208,7 +208,7 @@ int main (void){
                 } break;
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
-                    //printf("In event \n");
+                    printf("In event \n");
                     update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
@@ -227,7 +227,7 @@ int main (void){
                 } break;
 
                 case SDL_TEXTINPUT: {
-                    //printf(" Typing \n");
+                    printf(" Typing \n");
                     size_t text_size = strlen(event.text.text);
                     const size_t free_space = BUFFER_CAPACITY - buffer_size;
                     if (text_size>free_space){
