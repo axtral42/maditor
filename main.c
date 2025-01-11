@@ -119,7 +119,7 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
         .w=(int) floorf(FONT_CHAR_WIDTH * scale),
         .h=(int) floorf(FONT_CHAR_HEIGHT * scale)
     };
-    size_t index = '?' - ASCII_DISPLAY_LOW;
+    size_t index = '?' - ASCII_DISPLAY_LOW; //setting default char as question mark for unprintable characters
     if (c>= ASCII_DISPLAY_LOW && c<=ASCII_DISPLAY_HIGH)
     index = c - ASCII_DISPLAY_LOW;
 
@@ -160,7 +160,7 @@ size_t buffer_size=0;
 size_t buffer_cursor=0;
 
 void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
-    Vec2f pos= vec2f(buffer_cursor*FONT_CHAR_WIDTH*FONT_SCALE, 0.0f);
+    Vec2f pos= vec2f((float) buffer_cursor*FONT_CHAR_WIDTH*FONT_SCALE, 0.0f);
     const SDL_Rect rect={
         .x=(int) floorf(pos.x),
         .y=pos.y ,
@@ -240,25 +240,23 @@ int main (void){
                 } break;
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
-                    //printf("In event \n");
                     update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
-                            //printf("In backspace \n");
                            buffer_backspace();
                          } break;
 
                           case SDLK_DELETE: {
-                            //printf("In backspace \n");
                            buffer_delete();
                          } break;
                           case SDLK_LEFT: {
                             if (buffer_cursor > 0){
                                 buffer_cursor -= 1;
+                                //printf("%lu\n",buffer_cursor);
                             }
                          } break;
                           case SDLK_RIGHT: {
-                            if (buffer_cursor < buffer_size){
+                            if (buffer_cursor <= buffer_size){
                                 buffer_cursor += 1;
                             }
                          } break;
