@@ -2,6 +2,8 @@
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <errno.h>
 
 #define LINE_INIT_CAPACITY 1024
 #define EDITOR_INIT_CAPACITY 128
@@ -91,7 +93,7 @@ void editor_insert_new_line(Editor* editor){
 
      size_t line_size = sizeof(editor->lines[0]);
     editor_grow(editor,1);
-    memmove(editor->lines+ (editor->cursor_row +1) * line_size,editor->lines + (editor->cursor_row) * line_size ,(editor->size - editor->cursor_row) * line_size);
+    memmove(editor->lines+ (editor->cursor_row +1),editor->lines + (editor->cursor_row) ,(editor->size - editor->cursor_row) * line_size); //[UNDERSTAND} no need to multiply by line size, causes crash on inserting between text
     editor->cursor_row+=1;
     memset(&editor->lines[editor->cursor_row], 0, line_size);
     editor->size += 1;
@@ -146,4 +148,18 @@ const char* editor_char_under_cursor(Editor* editor){
     }
     return NULL;
 
+}
+
+void editor_save_to_file(const Editor *editor, const char *file_path){
+    FILE *f=fopen(file_path, "w");
+    if (f ==NULL){
+        fprintf(stdout, "ERROR: Couldn't open file %s because of %s\n",file_path,strerror(errno));
+    }
+
+    for (size_t row=0; row< editor->size; row++){
+        fwrite(editor->lines[row].chars, 1, editor->lines[row].size,f);
+        fputc('\n',f);
+    }
+    fclose(f);
+    fprintf(stdout, "SUCCESS: Content saved to %s\n",file_path);
 }

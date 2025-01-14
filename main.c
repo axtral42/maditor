@@ -265,12 +265,19 @@ int main (void){
                          case SDLK_RETURN:{
                             editor_insert_new_line(&editor);
                          } break;
+                        
+                        case SDLK_s:{
+                                    SDL_Keymod h= SDL_GetModState();
+                                    if ( h==KMOD_LCTRL || h==KMOD_RCTRL )
+                                    editor_save_to_file(&editor, "output");;
+                         } break;
 
                          case SDLK_F5: {
                             r=rand_r(&seed); //this will provide different value for multi color typing mode (2) 
                             mode = (mode +1) % 3;
                          }
                     }
+
                 } break;
 
                 case SDL_TEXTINPUT: {
@@ -288,10 +295,11 @@ int main (void){
             scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
         for (size_t row=0; row< editor.size; row++){
             Line* line= editor.lines + row;
-        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE, r, mode);
+        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE, r, mode);
         }
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
+
         //printf("Updating\n");
         update=false;
         SDL_RenderPresent(renderer); //updates the screen
