@@ -7,7 +7,7 @@
 #include<unistd.h>
 
 #include "./la.h"
-#include "./buffer.h"
+#include "./editor.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "./stb_image.h"
@@ -156,29 +156,38 @@ void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos
     render_text_sized(renderer,font,text, strlen(text), pos,color, scale, r, mode);
 }
 
-Line line={0};
-size_t cursor=0;
+Editor editor={0};
 
 void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
-    Vec2f pos= vec2f((float) cursor*FONT_CHAR_WIDTH*FONT_SCALE, 0.0f);
+    Vec2f pos= vec2f((float) editor.cursor_col*FONT_CHAR_WIDTH*FONT_SCALE, (float) editor.cursor_row*FONT_CHAR_HEIGHT*FONT_SCALE);
     const SDL_Rect rect={
         .x=(int) floorf(pos.x),
-        .y=pos.y ,
+        .y=(int) floorf(pos.y) ,
         .w=FONT_CHAR_WIDTH * FONT_SCALE,
         .h=FONT_CHAR_HEIGHT * FONT_SCALE
     };
     //scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[92],&rect));  //use a | as a cursor, will also change color with the text, no blinking
     scc(SDL_SetRenderDrawColor(renderer, UNHEXRGBA(color))); //try to understand how this function works
     scc(SDL_RenderFillRect(renderer, &rect));
-    if (cursor < line.size ){
-    render_char(renderer, font,line.chars[cursor],  pos, color & 0xffffff00, FONT_SCALE , 0 , 0); //and operation to make alpha 00 and hence transparent or something, but if alpha not 00 it won't work, understand why
+    if (editor.size>0 && editor.cursor_col<=editor.lines[editor.cursor_row].size){
+    const char* c= editor_char_under_cursor(&editor);
+    if (c){
+    render_char(renderer, font, *c,  pos, color & 0xffffff00, FONT_SCALE , 0 , 0); //and operation to make alpha 00 and hence transparent or something, but if alpha not 00 it won't work, understand why
+    }
     }
 }
 
 void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale, int h){
     char schars[100]= "characters:";
     char len[10];
-    sprintf(len, "%lu", line.size);
+    //printf("%lu\n", editor.lines[editor.cursor_row].size);
+    if (editor.size>editor.cursor_row){
+        sprintf(len, "%lu", editor.lines[editor.cursor_row].size);
+    
+    }
+    else{
+        sprintf(len, "%lu", 0lu);
+    }
     strcat(schars,len);
     //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
     //reason: in the render char function render copy copied the texture to buffer before texture mod was set, hence color mismatch happened, as c was copied before setting to white
@@ -218,25 +227,43 @@ int main (void){
                     update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
-                            if (cursor>0){
-                           line_backspace(&line, cursor);
-                           cursor-=1;
-                            }
+                           editor_backspace(&editor);
                          } break;
 
                           case SDLK_DELETE: {
-                           line_delete(&line, cursor);
+                           editor_delete(&editor);
                          } break;
+
                           case SDLK_LEFT: {
-                            if (cursor > 0){
-                                cursor -= 1;
-                                //printf("%lu\n",cursor);
+                            if (editor.cursor_col > 0){
+                                editor.cursor_col -= 1;
+                                //printf("%lu\n",editor.cursor_col);
                             }
                          } break;
+
                           case SDLK_RIGHT: {
-                            if (cursor < line.size){
-                                cursor += 1;
+                            if (editor.cursor_col < editor.lines[editor.cursor_row].size){
+                                editor.cursor_col += 1;
                             }
+                         } break;
+
+                        case SDLK_UP: {
+                            if (editor.cursor_row>0){
+                                
+                                editor.cursor_row -= 1;
+                                //printf("%lu\n", editor.cursor_row);
+                            }
+                         } break;
+
+                         case SDLK_DOWN: {
+                            if (editor.cursor_row< editor.size){                              
+                                editor.cursor_row += 1;
+                                //printf("%lu\n", editor.cursor_row);                            
+                                }
+                         } break;
+
+                         case SDLK_RETURN:{
+                            editor_insert_new_line(&editor);
                          } break;
 
                          case SDLK_F5: {
@@ -248,8 +275,7 @@ int main (void){
 
                 case SDL_TEXTINPUT: {
                     //printf(" Typing \n");
-                   line_insert_before(&line, event.text.text, cursor);
-                   cursor+=1;
+                   editor_insert_before_cursor(&editor, event.text.text);
                 } break;
             }
         }
@@ -260,8 +286,10 @@ int main (void){
             scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
         
             scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
-
-        render_text_sized(renderer, &font, line.chars,line.size, vec2f(0.0, 0.0), FONT_COLOR, FONT_SCALE, r, mode);
+        for (size_t row=0; row< editor.size; row++){
+            Line* line= editor.lines + row;
+        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE, r, mode);
+        }
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
         //printf("Updating\n");
