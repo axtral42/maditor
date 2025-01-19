@@ -1,4 +1,5 @@
 # Maditor - The text editor for Madlads
+## Cool and experimental branch
 
 **Currently in development phase**
 
@@ -7,5 +8,5 @@ Getting started:
     make && ./maditor
 ```
 ## Features:
-Can write text upto 1kb and delete using backspace
+basic functionality implemented, moving on to interesting stuff
 
