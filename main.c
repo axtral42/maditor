@@ -259,7 +259,7 @@ int main (int argc, char **argv){
                          } break;
 
                           case SDLK_RIGHT: {
-                            if (editor.cursor_col < editor.lines[editor.cursor_row].size){
+                            if (editor.size>0 && editor.cursor_col<editor.lines[editor.cursor_row].size){
                                 editor.cursor_col += 1;
                             }
                          } break;
@@ -285,8 +285,14 @@ int main (int argc, char **argv){
                         
                         case SDLK_s:{
                                     SDL_Keymod h= SDL_GetModState();
-                                    if ( h==KMOD_LCTRL || h==KMOD_RCTRL )
-                                    editor_save_to_file(&editor, "output");;
+                                    if ( h==KMOD_LCTRL || h==KMOD_RCTRL ){
+                                        if (file_path){
+                                    editor_save_to_file(&editor, file_path);
+                                        }
+                                        else{
+                                         editor_save_to_file(&editor, "output");   
+                                        }
+                                    }
                          } break;
 
                          case SDLK_F5: {

@@ -7,6 +7,9 @@
 
 #define LINE_INIT_CAPACITY 1024
 #define EDITOR_INIT_CAPACITY 128
+#define CHUNK_INIT_CAPACITY 1024
+
+
 
 static void line_grow(Line* line, size_t n){
 
@@ -28,12 +31,11 @@ static void line_grow(Line* line, size_t n){
 }
 
 
-void line_insert_before(Line *line, const char *text, size_t *col){
+void line_insert_sized_before(Line *line, const char *text, size_t *col, size_t text_size){
     if (*col > line->size){
         *col=line->size;
     }
 
-     size_t text_size = strlen(text);
     line_grow(line,text_size);
     memmove(line->chars+ *col+text_size,line->chars+*col,line->size-*col);
     memcpy(line->chars + *col, text, text_size);
@@ -41,11 +43,20 @@ void line_insert_before(Line *line, const char *text, size_t *col){
     *col += text_size;
 }
 
-void line_append(Line *line, const char *text){
-size_t col= line->size;
-line_insert_before(line, text, &col);
+void line_insert_before(Line *line, const char *text, size_t *col){
+         size_t text_size = strlen(text);
+    line_insert_sized_before(line, text, col, text_size);
 }
 
+void line_append_sized(Line *line, const char *text, size_t text_size){
+    size_t col= line->size;
+    line_insert_sized_before(line, text, &col, text_size);
+}
+
+void line_append(Line *line, const char *text){
+    size_t text_size = strlen(text);
+    line_append_sized(line, text, text_size);
+}
 
 void line_backspace(Line *line, size_t *col){
     if (*col > line->size){
@@ -93,8 +104,8 @@ void editor_push_new_line(Editor* editor){
     
 }
 
-void editor_insert_new_line(Editor* editor){
-     if (editor->cursor_row >= editor->size){
+void editor_check_line(Editor* editor){
+    if (editor->cursor_row >= editor->size){
         if (editor->size > 0){
             editor->cursor_row = editor->size -1;
         }
@@ -102,6 +113,11 @@ void editor_insert_new_line(Editor* editor){
             editor_push_new_line(editor);
         }
     }
+}
+
+
+void editor_insert_new_line(Editor* editor){
+     editor_check_line(editor);
 
      size_t line_size = sizeof(editor->lines[0]);
     editor_grow(editor,1);
@@ -113,38 +129,17 @@ void editor_insert_new_line(Editor* editor){
 }
 
 void editor_insert_before_cursor(Editor* editor, const char* text){
-    if (editor->cursor_row >= editor->size){
-        if (editor->size > 0){
-            editor->cursor_row = editor->size -1;
-        }
-        else{
-            editor_push_new_line(editor);
-        }
-    }
+    editor_check_line(editor);
 
     line_insert_before(&editor->lines[editor->cursor_row], text, &editor->cursor_col);
 }
 void editor_backspace(Editor* editor){
-    if (editor->cursor_row >= editor->size){
-        if (editor->size > 0){
-            editor->cursor_row = editor->size -1;
-        }
-        else{
-            editor_push_new_line(editor);
-        }
-    }
+    editor_check_line(editor);
 
     line_backspace(&editor->lines[editor->cursor_row], &editor->cursor_col);
 }
 void editor_delete(Editor* editor){
-    if (editor->cursor_row >= editor->size){
-        if (editor->size > 0){
-            editor->cursor_row = editor->size -1;
-        }
-        else{
-            editor_push_new_line(editor);
-        }
-    }
+    editor_check_line(editor);
 
     line_delete(&editor->lines[editor->cursor_row],&editor->cursor_col);
 }
@@ -186,12 +181,13 @@ void editor_load_from_file( Editor *editor, const char *file_path){
         exit(1);
     }
 
-    static char chunk[640 * 1024];
+    static char chunk[CHUNK_INIT_CAPACITY];
+    
 
     while(!feof(f)){
         size_t n = fread(chunk, 1, sizeof(chunk), f);
         size_t count=0;
-        char append[640 * 1024];
+        char append[CHUNK_INIT_CAPACITY +1];
         memset(append, 0, sizeof(append));
         //fwrite(chunk, 1, n, stdout);
         for (size_t i=0; i<n; i++){
@@ -205,6 +201,7 @@ void editor_load_from_file( Editor *editor, const char *file_path){
             append[count++]=chunk[i];
             }
         }
+        editor_insert_before_cursor(editor, append); // final append to add caracters in the last line which may not have been picked up due to lack of \n
 
     } 
 

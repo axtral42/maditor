@@ -9,7 +9,9 @@ typedef struct{
     char* chars;
 } Line;
 
+void line_insert_sized_before(Line *line, const char *text, size_t *col, size_t text_size);
 void line_insert_before(Line *line, const char *text, size_t *col);
+void line_append_sized(Line *line, const char *text, size_t text_size);
 void line_append(Line *line, const char *text);
 void line_backspace(Line *line, size_t *col);
 void line_delete(Line *line, size_t *col);
