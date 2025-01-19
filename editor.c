@@ -171,19 +171,10 @@ void editor_save_to_file(const Editor *editor, const char *file_path){
     fprintf(stdout, "SUCCESS: Content saved to %s\n",file_path);
 }
 
-void editor_load_from_file( Editor *editor, const char *file_path){
+void editor_load_from_file( Editor *editor, FILE* f){
     assert(editor->lines == NULL && "The editor should be empty");
 
-    FILE *f = fopen(file_path, "r");
-
-    if (!f){
-        fprintf(stderr, "ERROR: couldn't open %s because of %s", file_path, strerror(errno));
-        exit(1);
-    }
-
     static char chunk[CHUNK_INIT_CAPACITY];
-    
-
     while(!feof(f)){
         size_t n = fread(chunk, 1, sizeof(chunk), f);
         size_t count=0;
@@ -204,6 +195,4 @@ void editor_load_from_file( Editor *editor, const char *file_path){
         editor_insert_before_cursor(editor, append); // final append to add caracters in the last line which may not have been picked up due to lack of \n
 
     } 
-
-    fclose(f);
 }

@@ -210,9 +210,12 @@ int main (int argc, char **argv){
     if (argc>1){
         file_path=argv[1];
     }
-
     if (file_path){
-        editor_load_from_file(&editor, file_path);
+        FILE *f = fopen(file_path, "r");
+        if (f){
+            editor_load_from_file(&editor, f);
+            fclose(f);
+        }
     }
 
     // Taking current time as seed
