@@ -180,9 +180,13 @@ void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
 void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float scale, int h){
     char schars[100]= "characters:";
     char len[10];
+    size_t total_chars=0;
     //printf("%lu\n", editor.lines[editor.cursor_row].size);
-    if (editor.size>editor.cursor_row){
-        sprintf(len, "%lu", editor.lines[editor.cursor_row].size);
+    if (editor.size>0){
+        for (size_t i=0; i<editor.size; i++){
+            total_chars += editor.lines[i].size;
+        }
+        sprintf(len, "%lu", total_chars);
     
     }
     else{
@@ -195,9 +199,22 @@ void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float sca
     render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale*0.5, 0, 1);
 }
 
+void usage(FILE* stream){
+    fprintf(stream, "Usage: maditor [File-path]\n");
+}
 
+int main (int argc, char **argv){
 
-int main (void){
+    const char* file_path=NULL;
+
+    if (argc>1){
+        file_path=argv[1];
+    }
+
+    if (file_path){
+        editor_load_from_file(&editor, file_path);
+    }
+
     // Taking current time as seed
     unsigned int seed = time(0);
     Uint32 r=rand_r(&seed); //random seed
@@ -256,7 +273,7 @@ int main (void){
                          } break;
 
                          case SDLK_DOWN: {
-                            if (editor.cursor_row< editor.size){                              
+                            if (editor.cursor_row < editor.size){                              
                                 editor.cursor_row += 1;
                                 //printf("%lu\n", editor.cursor_row);                            
                                 }

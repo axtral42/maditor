@@ -40,6 +40,13 @@ void line_insert_before(Line *line, const char *text, size_t *col){
     line->size += text_size;
     *col += text_size;
 }
+
+void line_append(Line *line, const char *text){
+size_t col= line->size;
+line_insert_before(line, text, &col);
+}
+
+
 void line_backspace(Line *line, size_t *col){
     if (*col > line->size){
         *col=line->size;
@@ -87,8 +94,13 @@ void editor_push_new_line(Editor* editor){
 }
 
 void editor_insert_new_line(Editor* editor){
-     if (editor->cursor_row > editor->size){
-        editor->cursor_row=editor->size;
+     if (editor->cursor_row >= editor->size){
+        if (editor->size > 0){
+            editor->cursor_row = editor->size -1;
+        }
+        else{
+            editor_push_new_line(editor);
+        }
     }
 
      size_t line_size = sizeof(editor->lines[0]);
@@ -162,4 +174,39 @@ void editor_save_to_file(const Editor *editor, const char *file_path){
     }
     fclose(f);
     fprintf(stdout, "SUCCESS: Content saved to %s\n",file_path);
+}
+
+void editor_load_from_file( Editor *editor, const char *file_path){
+    assert(editor->lines == NULL && "The editor should be empty");
+
+    FILE *f = fopen(file_path, "r");
+
+    if (!f){
+        fprintf(stderr, "ERROR: couldn't open %s because of %s", file_path, strerror(errno));
+        exit(1);
+    }
+
+    static char chunk[640 * 1024];
+
+    while(!feof(f)){
+        size_t n = fread(chunk, 1, sizeof(chunk), f);
+        size_t count=0;
+        char append[640 * 1024];
+        memset(append, 0, sizeof(append));
+        //fwrite(chunk, 1, n, stdout);
+        for (size_t i=0; i<n; i++){
+            if (chunk[i]=='\n'){
+                count=0; 
+                editor_insert_before_cursor(editor, append);
+                editor_insert_new_line(editor);
+                memset(append, 0, sizeof(append));
+            }
+            else{
+            append[count++]=chunk[i];
+            }
+        }
+
+    } 
+
+    fclose(f);
 }
