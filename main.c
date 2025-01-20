@@ -112,8 +112,7 @@ Font font_load_from_file(SDL_Renderer* renderer, const char *file_path){
 
 
 
-void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
-    int c_val=c;
+void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 color, float scale){
     const SDL_Rect dst={
         .x=(int) floorf(pos.x),
         .y=(int) floorf(pos.y),
@@ -124,36 +123,26 @@ void render_char(SDL_Renderer* renderer, Font* font,char c,  Vec2f pos, Uint32 c
     if (c>= ASCII_DISPLAY_LOW && c<=ASCII_DISPLAY_HIGH)
     index = c - ASCII_DISPLAY_LOW;
 
-    
-    Uint32 c2=pow(c_val,5);
-    if (mode==0){
-        r=rand(); //rand works but rand_r with seed doesn't work, why?
-    }
-    else if (mode==1){
-        c_val |= 0xffffff; 
-        c2=0;
-        r=0;
-    }
     //removing c_val makes all the text black, understand why
-    scc(SDL_SetTextureColorMod(font->spritesheet, (color & (c_val^ c2 ^ r) >> (8 * 0)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 1)) & 0xff,(color & (c_val^ c2 ^ r) >> (8 * 2)) & 0xff));
+    scc(SDL_SetTextureColorMod(font->spritesheet, (color >> (8 * 0)) & 0xff,(color >> (8 * 1)) & 0xff,(color >> (8 * 2)) & 0xff));
     scc(SDL_SetTextureAlphaMod(font->spritesheet, (color >> (8 * 3)) & 0xff)); //sets the color and alpha value for the given input string of text
     scc(SDL_RenderCopy(renderer,font->spritesheet,&font->glyph_table[index],&dst)); //moved to the last so updated texture mod is reflected
 
 }
 
-void render_text_sized(SDL_Renderer* renderer, Font* font,const char* text, size_t text_size,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
+void render_text_sized(SDL_Renderer* renderer, Font* font,const char* text, size_t text_size,  Vec2f pos, Uint32 color, float scale){
     
     
     Vec2f pen= pos;
 
     for(size_t i=0; i<text_size; ++i){
-        render_char(renderer,font, text[i],  pen, color, scale, r, mode);
+        render_char(renderer,font, text[i],  pen, color, scale);
         pen.x += FONT_CHAR_WIDTH * scale;
     }
 }
 
-void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos, Uint32 color, float scale, Uint32 r, int mode){
-    render_text_sized(renderer,font,text, strlen(text), pos,color, scale, r, mode);
+void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos, Uint32 color, float scale){
+    render_text_sized(renderer,font,text, strlen(text), pos,color, scale);
 }
 
 Editor editor={0};
@@ -172,7 +161,7 @@ void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
     if (editor.size>0 && editor.cursor_col<=editor.lines[editor.cursor_row].size){
     const char* c= editor_char_under_cursor(&editor);
     if (c){
-    render_char(renderer, font, *c,  pos, color & 0xffffff00, FONT_SCALE , 0 , 0); //and operation to make alpha 00 and hence transparent or something, but if alpha not 00 it won't work, understand why
+    render_char(renderer, font, *c,  pos, color & 0xff000000, FONT_SCALE); 
     }
     }
 }
@@ -193,10 +182,7 @@ void render_char_len(SDL_Renderer* renderer, Font* font, Uint32 color, float sca
         sprintf(len, "%lu", 0lu);
     }
     strcat(schars,len);
-    //for some reason the first letter is synced in color with entered text instead of the first character of entered text, check why
-    //reason: in the render char function render copy copied the texture to buffer before texture mod was set, hence color mismatch happened, as c was copied before setting to white
-    //sol: moved render copy to the end of function and after texture mod set
-    render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale*0.5, 0, 1);
+    render_text(renderer, font, schars, vec2f(0.0, h-(FONT_CHAR_HEIGHT*scale)), color, scale*0.5);
 }
 
 void usage(FILE* stream){
@@ -218,10 +204,6 @@ int main (int argc, char **argv){
         }
     }
 
-    // Taking current time as seed
-    unsigned int seed = time(0);
-    Uint32 r=rand_r(&seed); //random seed
-    int mode=1;
     scc(SDL_Init(SDL_INIT_VIDEO));
     int w=WINDOW_WIDTH,h=WINDOW_HEIGHT;
     int wi=w, hi=h;
@@ -297,11 +279,6 @@ int main (int argc, char **argv){
                                         }
                                     }
                          } break;
-
-                         case SDLK_F5: {
-                            r=rand_r(&seed); //this will provide different value for multi color typing mode (2) 
-                            mode = (mode +1) % 3;
-                         }
                     }
 
                 } break;
@@ -313,7 +290,7 @@ int main (int argc, char **argv){
             }
         }
         
-        if (update || wi!=w || hi!=h || mode==0){
+        if (update || wi!=w || hi!=h){
             wi=w;
             hi=h;
             scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
@@ -321,7 +298,7 @@ int main (int argc, char **argv){
             scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
         for (size_t row=0; row< editor.size; row++){
             Line* line= editor.lines + row;
-        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE, r, mode);
+        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE);
         }
         render_cursor(renderer, &font, FONT_COLOR);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
