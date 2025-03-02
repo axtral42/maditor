@@ -44,7 +44,7 @@ void line_insert_sized_before(Line *line, const char *text, size_t *col, size_t 
 }
 
 void line_insert_before(Line *line, const char *text, size_t *col){
-         size_t text_size = strlen(text);
+    size_t text_size = strlen(text);
     line_insert_sized_before(line, text, col, text_size);
 }
 
@@ -163,10 +163,11 @@ void editor_save_to_file(const Editor *editor, const char *file_path){
         fprintf(stdout, "ERROR: Couldn't open file %s because of %s\n",file_path,strerror(errno));
     }
 
-    for (size_t row=0; row< editor->size; row++){
+    for (size_t row=0; row< editor->size-1; row++){
         fwrite(editor->lines[row].chars, 1, editor->lines[row].size,f);
         fputc('\n',f);
     }
+    fwrite(editor->lines[editor->size].chars, 1, editor->lines[editor->size].size,f); //write last line without adding an extra new line
     fclose(f);
     fprintf(stdout, "SUCCESS: Content saved to %s\n",file_path);
 }
@@ -176,7 +177,7 @@ void editor_load_from_file( Editor *editor, FILE* f){
 
     static char chunk[CHUNK_INIT_CAPACITY];
     while(!feof(f)){
-        size_t n = fread(chunk, 1, sizeof(chunk), f);
+        size_t n = fread(chunk, 1, sizeof(chunk), f); //reading by chunks for large files
         size_t count=0;
         char append[CHUNK_INIT_CAPACITY +1];
         memset(append, 0, sizeof(append));
@@ -193,6 +194,7 @@ void editor_load_from_file( Editor *editor, FILE* f){
             }
         }
         editor_insert_before_cursor(editor, append); // final append to add caracters in the last line which may not have been picked up due to lack of \n
+        editor->cursor_row=0;
 
     } 
 }

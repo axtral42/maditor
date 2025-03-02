@@ -205,12 +205,10 @@ void usage(FILE* stream){
 
 int main (int argc, char **argv){
 
-    const char* file_path=NULL;
+    const char* file_path="output";
 
     if (argc>1){
         file_path=argv[1];
-    }
-    if (file_path){
         FILE *f = fopen(file_path, "r");
         if (f){
             editor_load_from_file(&editor, f);
@@ -289,13 +287,8 @@ int main (int argc, char **argv){
                         case SDLK_s:{
                                     SDL_Keymod h= SDL_GetModState();
                                     if ( h==KMOD_LCTRL || h==KMOD_RCTRL ){
-                                        if (file_path){
                                     editor_save_to_file(&editor, file_path);
                                         }
-                                        else{
-                                         editor_save_to_file(&editor, "output");   
-                                        }
-                                    }
                          } break;
 
                          case SDLK_F5: {
