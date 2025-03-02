@@ -2,3 +2,4 @@ maditor
 .vscode/
 output.c
 output
+nohup.out
