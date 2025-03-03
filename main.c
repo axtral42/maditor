@@ -207,6 +207,16 @@ void usage(FILE* stream){
     fprintf(stream, "Usage: maditor [File-path]\n");
 }
 
+Vec2f window_size(SDL_Window *window){
+    int w,h;
+    SDL_GetWindowSize(window, &w,&h);
+    return vec2f((float) w,(float) h );
+}
+
+Vec2f camera_project_point(SDL_Window *window, Vec2f point){
+    return vec2f_add(vec2f_sub(point,camera_pos), vec2f_mul(window_size(window), vec2fs(0.5f)));
+}
+
 int main (int argc, char **argv){
 
     const char* file_path="output";
@@ -224,10 +234,7 @@ int main (int argc, char **argv){
     unsigned int seed = time(0);
     Uint32 r=rand_r(&seed); //random seed
     int mode=1;
-    scc(SDL_Init(SDL_INIT_VIDEO));
-    int w=WINDOW_WIDTH,h=WINDOW_HEIGHT;
-    int wi=w, hi=h;
-    
+    scc(SDL_Init(SDL_INIT_VIDEO));    
     SDL_Window* window= scp(SDL_CreateWindow("Maditor", 0,0, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE));
     SDL_Renderer* renderer= scp(SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED));
 
@@ -309,14 +316,12 @@ int main (int argc, char **argv){
             }
         }
         
-            wi=w;
-            hi=h;
             scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
         
             scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
         for (size_t row=0; row< editor.size; row++){
             Line* line= editor.lines + row;
-            Vec2f line_pos= vec2f_sub(vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE),camera_pos);
+            Vec2f line_pos= camera_project_point(window,vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE));
             render_text_sized(renderer, &font, line->chars,line->size, line_pos, FONT_COLOR, FONT_SCALE, r, mode);
         }
         Vec2f cursor_pos= vec2f((float) editor.cursor_col*FONT_CHAR_WIDTH*FONT_SCALE, (float) editor.cursor_row*FONT_CHAR_HEIGHT*FONT_SCALE);
@@ -324,9 +329,9 @@ int main (int argc, char **argv){
         camera_vel= vec2f_sub(cursor_pos,camera_pos);
 
         camera_pos= vec2f_add(camera_pos, vec2f_mul(vec2f_mul(camera_vel,vec2fs(SPEED)), vec2fs(DELTA_TIME)));
-        cursor_pos= vec2f_sub(cursor_pos,camera_pos);
+        cursor_pos= camera_project_point(window, cursor_pos);
         render_cursor(renderer, &font, FONT_COLOR,cursor_pos);
-        render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
+        render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, window_size(window).y);
 
         //printf("Updating\n");
         SDL_RenderPresent(renderer); //updates the screen
@@ -335,8 +340,7 @@ int main (int argc, char **argv){
             if (duration<delta_time_ms){
                 SDL_Delay(delta_time_ms-duration);
             }
-        
-        SDL_GetWindowSize(window, &w,&h);
+
     }
 
     SDL_Quit();
