@@ -177,6 +177,7 @@ void editor_load_from_file( Editor *editor, FILE* f){
 
     static char chunk[CHUNK_INIT_CAPACITY];
     while(!feof(f)){
+        memset(chunk, 0, sizeof(chunk));
         size_t n = fread(chunk, 1, sizeof(chunk), f); //reading by chunks for large files
         size_t count=0;
         char append[CHUNK_INIT_CAPACITY +1];
@@ -193,8 +194,9 @@ void editor_load_from_file( Editor *editor, FILE* f){
             append[count++]=chunk[i];
             }
         }
+
         editor_insert_before_cursor(editor, append); // final append to add caracters in the last line which may not have been picked up due to lack of \n
-        editor->cursor_row=0;
 
     } 
+    editor->cursor_row=0;
 }
