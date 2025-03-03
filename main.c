@@ -28,6 +28,9 @@
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
+#define FPS 60
+#define DELTA_TIME (1.0f/FPS)
+#define SPEED 10
 
 #define UNHEXRGBA(color) \
 (color >> (8 * 0)) & 0xff, \
@@ -157,9 +160,10 @@ void render_text(SDL_Renderer* renderer, Font* font,const char* text,  Vec2f pos
 }
 
 Editor editor={0};
+Vec2f camera_pos={0};
+Vec2f camera_vel={0};
 
-void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color){
-    Vec2f pos= vec2f((float) editor.cursor_col*FONT_CHAR_WIDTH*FONT_SCALE, (float) editor.cursor_row*FONT_CHAR_HEIGHT*FONT_SCALE);
+void render_cursor(SDL_Renderer* renderer, Font* font, Uint32 color, Vec2f pos){
     const SDL_Rect rect={
         .x=(int) floorf(pos.x),
         .y=(int) floorf(pos.y) ,
@@ -232,8 +236,8 @@ int main (int argc, char **argv){
     
 
     bool quit=false;
-    bool update=true;
     while (!quit){
+        const Uint32 start = SDL_GetTicks();
         SDL_Event event={0}; //initialising the event struct
         while (SDL_PollEvent(&event)){
             switch (event.type){
@@ -242,7 +246,6 @@ int main (int argc, char **argv){
                 } break;
 
                 case SDL_KEYDOWN: {     //try to understand how eventhough sdl keydown catches everything text still goes to textinput case
-                    update=true;
                     switch(event.key.keysym.sym){ 
                         case SDLK_BACKSPACE: {
                            editor_backspace(&editor);
@@ -306,7 +309,6 @@ int main (int argc, char **argv){
             }
         }
         
-        if (update || wi!=w || hi!=h || mode==0){
             wi=w;
             hi=h;
             scc(SDL_SetRenderDrawColor(renderer,0,0,0,0)); //sets the color to be used by the renderer for operations
@@ -314,15 +316,25 @@ int main (int argc, char **argv){
             scc(SDL_RenderClear(renderer)); //clears the renderer with the set color
         for (size_t row=0; row< editor.size; row++){
             Line* line= editor.lines + row;
-        render_text_sized(renderer, &font, line->chars,line->size, vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE), FONT_COLOR, FONT_SCALE, r, mode);
+            Vec2f line_pos= vec2f_sub(vec2f(0.0, (float)row*FONT_CHAR_HEIGHT*FONT_SCALE),camera_pos);
+            render_text_sized(renderer, &font, line->chars,line->size, line_pos, FONT_COLOR, FONT_SCALE, r, mode);
         }
-        render_cursor(renderer, &font, FONT_COLOR);
+        Vec2f cursor_pos= vec2f((float) editor.cursor_col*FONT_CHAR_WIDTH*FONT_SCALE, (float) editor.cursor_row*FONT_CHAR_HEIGHT*FONT_SCALE);
+
+        camera_vel= vec2f_sub(cursor_pos,camera_pos);
+
+        camera_pos= vec2f_add(camera_pos, vec2f_mul(vec2f_mul(camera_vel,vec2fs(SPEED)), vec2fs(DELTA_TIME)));
+        cursor_pos= vec2f_sub(cursor_pos,camera_pos);
+        render_cursor(renderer, &font, FONT_COLOR,cursor_pos);
         render_char_len(renderer, &font, FONT_COLOR, FONT_SCALE, h);
 
         //printf("Updating\n");
-        update=false;
         SDL_RenderPresent(renderer); //updates the screen
-        }
+            const Uint32 duration= SDL_GetTicks() - start;
+            const Uint32 delta_time_ms= 1000/FPS;
+            if (duration<delta_time_ms){
+                SDL_Delay(delta_time_ms-duration);
+            }
         
         SDL_GetWindowSize(window, &w,&h);
     }
