@@ -157,17 +157,18 @@ const char* editor_char_under_cursor(Editor* editor){
 
 }
 
-void editor_save_to_file(const Editor *editor, const char *file_path){
+void editor_save_to_file( Editor *editor, const char *file_path){
     FILE *f=fopen(file_path, "w");
     if (f ==NULL){
         fprintf(stdout, "ERROR: Couldn't open file %s because of %s\n",file_path,strerror(errno));
     }
 
-    for (size_t row=0; row< editor->size-1; row++){
+    editor_check_line(editor);
+    for (size_t row=0; (row< editor->size-1) && (editor->size>1); row++){
         fwrite(editor->lines[row].chars, 1, editor->lines[row].size,f);
         fputc('\n',f);
     }
-    fwrite(editor->lines[editor->size].chars, 1, editor->lines[editor->size].size,f); //write last line without adding an extra new line
+    fwrite(editor->lines[editor->size-1].chars, 1, editor->lines[editor->size-1].size,f); //write last line without adding an extra new line
     fclose(f);
     fprintf(stdout, "SUCCESS: Content saved to %s\n",file_path);
 }
@@ -197,4 +198,6 @@ void editor_load_from_file( Editor *editor, FILE* f){
         editor->cursor_row=0;
 
     } 
+}
+    editor->cursor_row=0;
 }

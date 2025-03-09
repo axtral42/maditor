@@ -31,7 +31,7 @@ void editor_insert_new_line(Editor* editor);
 void editor_backspace(Editor* editor);
 void editor_delete(Editor* editor);
 const char* editor_char_under_cursor(Editor* editor);
-void editor_save_to_file(const Editor *editor, const char *file_path);
+void editor_save_to_file( Editor *editor, const char *file_path);
 void editor_load_from_file(Editor *editor, FILE *f);
 
 #endif //EDITOR_H_ 
